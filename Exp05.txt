@@ -1,0 +1,120 @@
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.impute import SimpleImputer
+
+# Load Dataset
+df = pd.read_csv("heart_disease_uci.csv")
+
+print("First Five Records:")
+print(df.head())
+
+print("\nDataset Shape:")
+print(df.shape)
+
+# Create Target Column
+df["target"] = (df["num"] > 0).astype(int)
+
+# Separate Features and Target
+X = df.drop(columns=["num", "target"])
+y = df["target"]
+
+# Convert Categorical Data into Numeric
+X = pd.get_dummies(X, drop_first=True)
+
+# Handle Missing Values
+imputer = SimpleImputer(strategy="median")
+X = pd.DataFrame(imputer.fit_transform(X), columns=X.columns)
+
+# Split Dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Feature Scaling
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# Logistic Regression without Regularization
+model = LogisticRegression(penalty=None, max_iter=5000)
+model.fit(X_train, y_train)
+
+train_acc = accuracy_score(y_train, model.predict(X_train))
+test_acc = accuracy_score(y_test, model.predict(X_test))
+
+# Ridge Regularization (L2)
+ridge = LogisticRegression(
+    penalty="l2", C=1.0, max_iter=5000
+)
+ridge.fit(X_train, y_train)
+
+ridge_train = accuracy_score(y_train, ridge.predict(X_train))
+ridge_test = accuracy_score(y_test, ridge.predict(X_test))
+
+# Lasso Regularization (L1)
+lasso = LogisticRegression(
+    penalty="l1", solver="liblinear", C=1.0, max_iter=5000
+)
+lasso.fit(X_train, y_train)
+
+lasso_train = accuracy_score(y_train, lasso.predict(X_train))
+lasso_test = accuracy_score(y_test, lasso.predict(X_test))
+
+# Display Results
+results = pd.DataFrame({
+    "Model": ["Original", "Ridge (L2)", "Lasso (L1)"],
+    "Training Accuracy": [train_acc, ridge_train, lasso_train],
+    "Testing Accuracy": [test_acc, ridge_test, lasso_test]
+})
+
+print("\nModel Performance:")
+print(results)
+
+# Accuracy Comparison Graph
+results.set_index("Model").plot(kind="bar", figsize=(8, 5))
+plt.title("Regularization Accuracy Comparison")
+plt.ylabel("Accuracy")
+plt.ylim(0, 1)
+plt.show()
+
+# Multicollinearity using Correlation
+plt.figure(figsize=(10, 6))
+sns.heatmap(
+    pd.DataFrame(X_train).corr(),
+    cmap="coolwarm"
+)
+plt.title("Correlation Heatmap")
+plt.show()
+
+# Compare L1 and L2 Coefficients
+coef = pd.DataFrame({
+    "Ridge": ridge.coef_[0],
+    "Lasso": lasso.coef_[0]
+})
+
+print("\nCoefficient Comparison:")
+print(coef)
+
+print("\nNon-zero Lasso Coefficients:")
+print(np.count_nonzero(lasso.coef_))
+
+# Confusion Matrix
+plt.figure(figsize=(5, 4))
+sns.heatmap(
+    confusion_matrix(y_test, lasso.predict(X_test)),
+    annot=True,
+    fmt="d",
+    cmap="Blues"
+)
+plt.title("Lasso Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()

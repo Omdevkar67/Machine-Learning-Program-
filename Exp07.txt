@@ -1,0 +1,195 @@
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score,
+    f1_score, classification_report, confusion_matrix
+)
+
+# 1. Load Iris dataset
+iris = load_iris()
+
+X = iris.data
+y = iris.target
+
+print("Dataset loaded successfully")
+print("Number of samples:", X.shape[0])
+print("Number of features:", X.shape[1])
+print("Classes:", iris.target_names)
+
+# 2. Create DataFrame
+df = pd.DataFrame(X, columns=iris.feature_names)
+df["Target"] = y
+df["Species"] = df["Target"].map(
+    dict(enumerate(iris.target_names))
+)
+
+print("\nDataset:")
+print(df.head())
+print("Dataset Shape:", df.shape)
+
+# 3. Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.30,
+    random_state=42,
+    stratify=y
+)
+
+print("\nTraining samples:", X_train.shape[0])
+print("Testing samples:", X_test.shape[0])
+
+# 4. Standardize features
+scaler = StandardScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+print("\nFeature scaling completed.")
+
+# 5. Linear SVM classifier
+linear_svm = SVC(kernel="linear")
+linear_svm.fit(X_train_scaled, y_train)
+
+linear_pred = linear_svm.predict(X_test_scaled)
+
+# 6. Evaluate Linear SVM
+linear_accuracy = accuracy_score(y_test, linear_pred)
+linear_precision = precision_score(
+    y_test, linear_pred, average="weighted"
+)
+linear_recall = recall_score(
+    y_test, linear_pred, average="weighted"
+)
+linear_f1 = f1_score(
+    y_test, linear_pred, average="weighted"
+)
+
+print("\nLINEAR SVM PERFORMANCE")
+print("----------------------")
+print("Accuracy :", linear_accuracy)
+print("Precision:", linear_precision)
+print("Recall   :", linear_recall)
+print("F1 Score :", linear_f1)
+
+print("\nClassification Report:")
+print(classification_report(
+    y_test, linear_pred,
+    target_names=iris.target_names
+))
+
+# Linear SVM confusion matrix
+print("Linear SVM Confusion Matrix:")
+print(confusion_matrix(y_test, linear_pred))
+
+# 7. RBF (Nonlinear) SVM classifier
+rbf_svm = SVC(kernel="rbf")
+rbf_svm.fit(X_train_scaled, y_train)
+
+rbf_pred = rbf_svm.predict(X_test_scaled)
+
+# 8. Evaluate RBF SVM
+rbf_accuracy = accuracy_score(y_test, rbf_pred)
+rbf_precision = precision_score(
+    y_test, rbf_pred, average="weighted"
+)
+rbf_recall = recall_score(
+    y_test, rbf_pred, average="weighted"
+)
+rbf_f1 = f1_score(
+    y_test, rbf_pred, average="weighted"
+)
+
+print("\nRBF SVM PERFORMANCE")
+print("-------------------")
+print("Accuracy :", rbf_accuracy)
+print("Precision:", rbf_precision)
+print("Recall   :", rbf_recall)
+print("F1 Score :", rbf_f1)
+
+print("\nClassification Report:")
+print(classification_report(
+    y_test, rbf_pred,
+    target_names=iris.target_names
+))
+
+# RBF SVM confusion matrix
+print("RBF SVM Confusion Matrix:")
+print(confusion_matrix(y_test, rbf_pred))
+
+# 9. Compare performance
+comparison = pd.DataFrame({
+    "Classifier": ["Linear SVM", "RBF SVM"],
+    "Accuracy": [linear_accuracy, rbf_accuracy],
+    "Precision": [linear_precision, rbf_precision],
+    "Recall": [linear_recall, rbf_recall],
+    "F1 Score": [linear_f1, rbf_f1]
+})
+
+print("\nSVM PERFORMANCE COMPARISON")
+print(comparison)
+
+# 10. Display performance in percentage
+comparison_percentage = comparison.copy()
+
+metrics = ["Accuracy", "Precision", "Recall", "F1 Score"]
+
+for metric in metrics:
+    comparison_percentage[metric] = (
+        comparison_percentage[metric] * 100
+    ).round(2)
+
+print("\nSVM Classification Performance (%)")
+print(comparison_percentage)
+
+# 11. Determine best classifier
+best_model = comparison.loc[
+    comparison["F1 Score"].idxmax()
+]
+
+print("\nBest Performing Classifier:")
+print(best_model["Classifier"])
+print("Best F1 Score:", round(best_model["F1 Score"], 4))
+print("Best Accuracy:", round(best_model["Accuracy"], 4))
+
+# 12. Plot confusion matrices
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+sns.heatmap(
+    confusion_matrix(y_test, linear_pred),
+    annot=True, fmt="d", cmap="Blues",
+    xticklabels=iris.target_names,
+    yticklabels=iris.target_names,
+    ax=axes[0]
+)
+axes[0].set_title("Linear SVM")
+axes[0].set_xlabel("Predicted")
+axes[0].set_ylabel("Actual")
+
+sns.heatmap(
+    confusion_matrix(y_test, rbf_pred),
+    annot=True, fmt="d", cmap="Greens",
+    xticklabels=iris.target_names,
+    yticklabels=iris.target_names,
+    ax=axes[1]
+)
+axes[1].set_title("RBF SVM")
+axes[1].set_xlabel("Predicted")
+axes[1].set_ylabel("Actual")
+
+plt.tight_layout()
+plt.show()
+
+# 13. Final conclusion
+if rbf_f1 > linear_f1:
+    print("\nConclusion: RBF SVM performed better than Linear SVM based on F1 Score.")
+elif linear_f1 > rbf_f1:
+    print("\nConclusion: Linear SVM performed better than RBF SVM based on F1 Score.")
+else:
+    print("\nConclusion: Both SVM classifiers achieved the same F1 Score.")

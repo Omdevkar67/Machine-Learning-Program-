@@ -1,0 +1,46 @@
+
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+# Load Dataset
+df = pd.read_csv('Titanic-Dataset.csv')
+
+print("Original Dataset:")
+print(df.head())
+
+# Check Missing Values
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+# Handle Missing Values
+df['Age'] = df['Age'].fillna(df['Age'].mean())
+df['Fare'] = df['Fare'].fillna(df['Fare'].mean())
+df['Embarked'] = df['Embarked'].fillna(df['Embarked'].mode()[0])
+
+# Drop Unnecessary Columns
+df.drop(['PassengerId', 'Name', 'Ticket', 'Cabin'],
+        axis=1, inplace=True, errors='ignore')
+
+# Encoding Categorical Variables
+df = pd.get_dummies(df, columns=['Sex', 'Embarked', 'Pclass'],
+                    drop_first=True, dtype=int)
+
+# Feature Scaling
+scaler = StandardScaler()
+
+feature_columns = ['Age', 'Fare', 'SibSp', 'Parch']
+
+df[feature_columns] = scaler.fit_transform(df[feature_columns])
+
+# Check Processed Dataset
+print("\nProcessed Dataset:")
+print(df.head())
+
+print("\nMissing Values After Processing:")
+print(df.isnull().sum())
+
+# Save Cleaned Dataset
+df.to_csv("titanic_cleaned.csv", index=False)
+
+print("\nFeature Engineering Completed Successfully!")
